@@ -1,1 +1,1 @@
-Due to increased identity checks within ChatGPT and Sora, I've decided to cease all development and plans for bringing it to Linux. Find an AI service that respects you.
+Unofficial Grok app for Linux. Runs as a flatpak with highly restrictive permissions. Third party logins are not supported. To allow for file drag and drop, download the FlatSeal flatpak app and allow access to your filesystem. Adjustments can be made for microphone or camera access as well in FlatSeal.
