@@ -2,7 +2,8 @@ const { app, BrowserWindow, Menu, shell, clipboard, session, Notification } = re
 const path = require('path');
 const fs = require('fs');
 
-let win;
+let win = null;
+let isWindowCreationStarted = false;
 
 // ---------------- Restore-on-rerun state ----------------
 function stateFilePath() {
@@ -92,29 +93,30 @@ function safeGetCurrentUrl() {
 const gotLock = app.requestSingleInstanceLock();
 
 if (!gotLock) {
-  app.quit();
+  app.exit(0);  // Hard exit for duplicate processes
 } else {
   app.on('second-instance', () => {
-    if (!win) return;
+    if (!win || win.isDestroyed()) return;
 
-    // If already focused → save chat + quit
+    // If already focused & visible → save current URL + quit (your desired special behavior)
     if (win.isFocused() && win.isVisible() && !win.isMinimized()) {
       const url = safeGetCurrentUrl();
-      if (url) writeRestoreUrl(url);
+      if (url) {
+        writeRestoreUrl(url);
+      }
       app.quit();
       return;
     }
 
-    // Otherwise, best-effort restore visibility
+    // Otherwise → bring existing window to front
     if (win.isMinimized()) win.restore();
     if (!win.isVisible()) win.show();
-    win.show();
     win.focus();
 
-    // Wayland-safe fallback: notify if raise is denied
+    // Optional: notification fallback (especially useful on Linux/Wayland)
     if (Notification.isSupported()) {
       const n = new Notification({
-        title: 'ChatGPT',
+        title: 'Grok',
         body: 'Already running — click to bring it forward'
       });
       n.on('click', () => {
@@ -127,9 +129,20 @@ if (!gotLock) {
   });
 
   function createWindow() {
+    // Strong guard: prevent any parallel creation attempts
+    if (isWindowCreationStarted || (win && !win.isDestroyed())) {
+      if (win && !win.isDestroyed()) {
+        win.focus();
+      }
+      return;
+    }
+
+    isWindowCreationStarted = true;
+
     win = new BrowserWindow({
       width: 1200,
       height: 800,
+      // show: false,               ← comment out or delete this line
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true
@@ -137,7 +150,7 @@ if (!gotLock) {
       icon: path.join(__dirname, 'assets/icons/build/icons/64x64.png')
     });
 
-    // Decide startup URL (one-shot restore)
+    // Decide startup URL (restore if valid)
     const restoreUrl = readRestoreUrl();
     const startUrl =
       restoreUrl && isAllowed(restoreUrl)
@@ -259,9 +272,21 @@ if (!gotLock) {
 
     win.on('closed', () => {
       win = null;
+      isWindowCreationStarted = false;
     });
   }
 
   app.whenReady().then(createWindow);
-  app.on('window-all-closed', () => app.quit());
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
 }
