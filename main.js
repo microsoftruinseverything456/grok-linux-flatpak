@@ -39,18 +39,12 @@ function clearRestoreUrl() {
 // ---------------- Domain policy ----------------
 const ALLOWED_HOSTS = [
   'grok.com',
-  'accounts.x.ai',
-  'challenges.cloudflare.com',
-  'api.x.ai',
-  'api.grok.xai.com',
-  'console.x.ai',
-  'docs.x.ai',
   'x.ai',
   'cloudflare.com',
+  'xai.com',
   'cloudflareinsights.com',
-  'auth.grokipedia.com',
   'grokipedia.com',
-  'auth.grokusercontent.com'
+  'grokusercontent.com'
 ];
 
 function isAllowed(urlString) {
